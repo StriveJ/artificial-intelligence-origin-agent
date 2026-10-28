@@ -1,0 +1,39 @@
+{
+  "datasetVersion": 1,
+  "casesSha256": "08ef8992858442933957d98bbf6d209cd0c8283a0b82920d58c958533070f395",
+  "fixtureSha256": "d73fd96861452cf92eb92328e8cabe594cf056d633f0cab7ab3cbe0b7e036113",
+  "acceptanceSha256": "8155d21280bac1b67191ca6033c3ea4e1797f45e57acf239eb2ee1dafa037560",
+  "program": {
+    "sha256": "9bb38ddc36c3168bf820ecb2778a5de43c2a9d778d9f405ffcb8b86af1c49994",
+    "files": [
+      [
+        "../eval/answer-rubric.mjs",
+        "caaee69beb8cb9733d01ec050b9bb3a37ee1bfacb931ccb42125505efac18b70"
+      ],
+      [
+        "../eval/claude-client.mjs",
+        "dea42cbecac6ef51db0f363796e25462f61ab13a21308181a214df07010aeb63"
+      ],
+      [
+        "../eval/lexical.mjs",
+        "bc0a0a4edb24ab8f71908040a714229c968c3423bbc18e0d7481db404e49ee30"
+      ],
+      [
+        "contract.mjs",
+        "e123be447cf317b811652d6df311d2a94a674c8daf3e409b0753f8c41ad540d7"
+      ],
+      [
+        "dataset.mjs",
+        "a2f52890f394a180e50d59148816f7b11171e0481f141e0a05421581b4780e38"
+      ],
+      [
+        "freeze.mjs",
+        "1a0310c530eba971036faab0b1a51c049ba92b5c0d6f09c7212d5ba8e2162818"
+      ],
+      [
+        "run.mjs",
+        "038d1565389e7b952a64152742416ba9320336e266ced0741900ee0451c9e5b3"
+      ]
+    ]
+  }
+}

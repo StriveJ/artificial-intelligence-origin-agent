@@ -1,0 +1,18 @@
+# Public build inputs use LF; binary blobs retain their original bytes.
+* text=auto eol=lf
+product/** text=auto eol=lf
+studio/scripts/** text=auto eol=lf
+studio/tests/** text=auto eol=lf
+studio/hooks/** text=auto eol=lf
+# Frozen evaluations bind raw program bytes; Windows checkout must preserve LF.
+lab/answer-acceptance/*.mjs text eol=lf
+lab/answer-acceptance-v3/*.mjs text eol=lf
+lab/eval/answer-rubric.mjs text eol=lf
+lab/eval/claude-client.mjs text eol=lf
+lab/eval/lexical.mjs text eol=lf
+
+lab/answer-acceptance-en/*.mjs text eol=lf
+lab/language-acceptance-*/*.mjs text eol=lf
+lab/support/synthetic-fixture.mjs text eol=lf
+lab/support/stage-hub.mjs text eol=lf
+lab/support/check-inputs.mjs text eol=lf

@@ -1,0 +1,12 @@
+# Public build workspace; artifact ignores live in product/.gitignore.
+aipa-test-tmp/
+lab/.upgrade-runs/
+
+# Local settings, credentials, dependencies, and generated runtime state.
+/.claude/
+.aipa-hub/
+AIPA-INSTANCE.md
+.env
+.env.*
+!.env.example
+node_modules/

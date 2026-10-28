@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+// Pre-push version gate: product changes pushed to master require an ORIGIN-MANIFEST.yaml change (bump first).
+// Installed as .git/hooks/pre-push by install-git-hooks.mjs.
+import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+
+const EMPTY_SHA = '0000000000000000000000000000000000000000';
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+const input = readFileSync(0, 'utf8').trim();
+for (const line of input.split('\n').filter(Boolean)) {
+  const [localRef, localSha, remoteRef, remoteSha] = line.split(/\s+/);
+  if (remoteRef !== 'refs/heads/master') continue;
+  const base = remoteSha === EMPTY_SHA ? EMPTY_TREE : remoteSha;
+  const changed = execFileSync('git', ['diff', '--name-only', `${base}..${localSha}`], { encoding: 'utf8' });
+  const touchesProduct = changed.split('\n').some(f => f.startsWith('product/'));
+  if (touchesProduct && !changed.includes('product/ORIGIN-MANIFEST.yaml')) {
+    console.error('BLOCKED: product changes on master require a version bump (product/ORIGIN-MANIFEST.yaml is unchanged)');
+    console.error('Run node studio/scripts/aipa-bump-version.mjs --root . before pushing again');
+    process.exit(1);
+  }
+}
+process.exit(0);

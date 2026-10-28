@@ -1,0 +1,51 @@
+{
+  "datasetVersion": "representative-language-1",
+  "casesSha256": "13de28690980d4f60f4dec0362d84577548925e8dd6472c7736914d943ac46da",
+  "materialSha256": "30a370d7ef50348bc3dbec4c0e14e7aa59797491ce100f57532cf027ccdc06b0",
+  "acceptanceSha256": "0dd1ef549934caef35d51c73f6a7f1087c99e8da5763fcc12866098044d534cf",
+  "program": {
+    "sha256": "726aa74e32dc1ebcec897415e50152598c266c3cc9520dc552bee019bd790386",
+    "files": [
+      [
+        "./contract.mjs",
+        "e7e71bc6b75b9a6bff38da094dc84c3d94b27740315edf08b43acba51c5d1a65"
+      ],
+      [
+        "./contract.test.mjs",
+        "3ecd0bc152843ae367c06030117c13ca909279dc475becdc82a90691b5e518e0"
+      ],
+      [
+        "./dataset.mjs",
+        "1f31191feaa6b8de9bcd18ecd18ec3785c760af0309a440a0131d2785d783b93"
+      ],
+      [
+        "./freeze.mjs",
+        "0bf777dc0a3d0e85e950fb719a148e012de291c139953de89c7ad45b0bea12ed"
+      ],
+      [
+        "./prepare.mjs",
+        "a4d13fdc9626164bdcc302e2113ffc52d04c2e9995b44e3e50e6c723a3bde12a"
+      ],
+      [
+        "./run.mjs",
+        "21108a1fca267c7832051de7a6ac11206a53e54a7c9a4a0b805ba1fcb5ab7458"
+      ],
+      [
+        "../eval/claude-client.mjs",
+        "dea42cbecac6ef51db0f363796e25462f61ab13a21308181a214df07010aeb63"
+      ],
+      [
+        "../support/synthetic-fixture.mjs",
+        "fcbf44ffb4890dd9274b93c66ac2be1da8b98fd9d3564bdb118ab120061ad258"
+      ],
+      [
+        "../support/stage-hub.mjs",
+        "b69ca62c696d1d853e2f40e67555babd5183eba7776a110129ed216a6b1a5928"
+      ],
+      [
+        "../support/check-inputs.mjs",
+        "a4eac4a4d3054e1ac66f66cdef7f4c06d62d282c3b9b7fe52959cd7e156cbb99"
+      ]
+    ]
+  }
+}

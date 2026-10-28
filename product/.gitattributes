@@ -1,0 +1,2 @@
+# Hooks need LF shebangs on fresh POSIX checkouts.
+core-space/githooks/* text eol=lf
