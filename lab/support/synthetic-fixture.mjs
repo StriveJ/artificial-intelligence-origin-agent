@@ -33,6 +33,8 @@ export function createSyntheticFixture({ parent, prefix = 'repair-' } = {}) {
     XDG_CONFIG_HOME: home, XDG_DATA_HOME: home, XDG_STATE_HOME: home,
     TEMP: root, TMP: root, TMPDIR: root, AIPA_TEST_TMP: root,
     GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: join(home, 'empty.gitconfig'),
+    // Keep long-path handling explicit while excluding developer Git configuration.
+    GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'core.longpaths', GIT_CONFIG_VALUE_0: 'true',
     GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never', GIT_CEILING_DIRECTORIES: root,
   });
   function instance(name = 'instance') {

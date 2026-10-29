@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README_CN.md)
 
-**Version 1.0.1 · Apache-2.0**
+**Version 1.0.2 · Apache-2.0**
 
 AIPA (Artificial Intelligence Personal Agent) is a local-first personal agent framework. Your profile, preferences, memories, reusable skills, projects, and activity records live in files inside your own private instance. Connected model hosts use this context across sessions; optional Hub services provide a persistent Web interface and device synchronization.
 

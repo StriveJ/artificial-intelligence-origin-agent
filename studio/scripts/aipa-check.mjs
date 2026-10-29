@@ -6,6 +6,7 @@ import { dirname, join, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { qualityReferences } from './lib/quality-refs.mjs';
+import { formatTapFailures, formatGitHubErrorAnnotation } from './lib/tap-failures.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..','..');
 const i=process.argv.indexOf('--mode'),mode=i<0?'all':process.argv[i+1];
@@ -21,7 +22,7 @@ function run(label,args){
   try{r=spawnSync(process.execPath,args,{cwd:root,env,stdio:['ignore',fd,fd]});}finally{closeSync(fd);}
   const status=r.error?1:r.status??1;records.push({label,status,log:relative(root,log).replace(/\\/g,'/')});
   console.log(`${label}: ${status===0?'PASS':'FAIL'} (${relative(root,log)})`);
-  if(status!==0){console.error(readFileSync(log,'utf8').split(/\r?\n/).slice(-35).join('\n'));throw new Error(label+' failed');}
+  if(status!==0){const output=readFileSync(log,'utf8'),failures=formatTapFailures(output);if(failures)console.error(failures);const annotation=formatGitHubErrorAnnotation(failures,process.env.GITHUB_ACTIONS);if(annotation)console.log(annotation);console.error(output.split(/\r?\n/).slice(-35).join('\n'));throw new Error(label+' failed');}
 }
 function quick(){
   const files=[...walk(join(root,'product')),...walk(join(root,'studio','scripts'))].filter(p=>p.endsWith('.mjs'));

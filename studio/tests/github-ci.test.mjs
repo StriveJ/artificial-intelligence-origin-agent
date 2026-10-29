@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 test('Public CI uses both supported desktop platforms, Node 24, pinned actions, and the complete mechanical gate',()=>{
  const workflow=readFileSync('.github/workflows/ci.yml','utf8');
  assert.match(workflow,/branches: \[master, dev\]/);
+ assert.match(workflow,/push:\s*\n\s+branches: \[master, dev, 'codex\/\*\*'\]/);
  assert.match(workflow,/os: \[ubuntu-latest, windows-latest\]/);
  assert.match(workflow,/node-version: '24'/);
  assert.match(workflow,/node studio\/scripts\/aipa-check\.mjs --mode all/);

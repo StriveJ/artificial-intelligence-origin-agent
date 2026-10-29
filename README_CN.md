@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-**版本 1.0.1 · Apache-2.0**
+**版本 1.0.2 · Apache-2.0**
 
 AIPA（Artificial Intelligence Personal Agent，人工智能个人智能体）是一个以本地文件为基础的个人智能体框架。个人画像、偏好、记忆、技能、项目和活动记录保存在你自己的私有实例中，由连接的模型宿主在不同会话之间使用。
 
