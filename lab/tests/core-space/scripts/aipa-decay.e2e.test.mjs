@@ -6,8 +6,8 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeTestDir } from './lib/test-tmp.mjs';
-import { addDays, dayKey } from '../../../../product/core-space/scripts/lib/time-boundary.mjs';
-import { tsLocal } from '../../../../product/core-space/scripts/lib/day-clock.mjs';
+import { addDays } from '../../../../product/core-space/scripts/lib/time-boundary.mjs';
+import { todayKey } from '../../../../product/core-space/scripts/lib/day-clock.mjs';
 
 const HERE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', 'product', 'core-space', 'scripts');
 const INDEX = join(HERE, 'aipa-index.mjs');
@@ -15,8 +15,6 @@ const DECAY = join(HERE, 'aipa-decay.mjs');
 const SEARCH = join(HERE, 'aipa-search.mjs');
 
 
-const TODAY = dayKey(tsLocal(new Date()), 6);
-const BASE = addDays(TODAY, -10);
 
 function fixture() {
   const root = makeTestDir('aipa-decay-');
@@ -34,6 +32,7 @@ const indexEntries = (root) => JSON.parse(readFileSync(join(root, 'user-space', 
 
 test("Decay state survives index rebuilds in a separate file", () => {
   const root = fixture();
+  const TODAY = todayKey(root), BASE = addDays(TODAY, -10);
   try {
     run(root, INDEX, []);
     const id = indexEntries(root)[0].id;
@@ -57,6 +56,7 @@ test("Decay state survives index rebuilds in a separate file", () => {
 
 test("Decay is idempotent within a day", () => {
   const root = fixture();
+  const TODAY = todayKey(root), BASE = addDays(TODAY, -10);
   try {
     run(root, INDEX, []);
     run(root, DECAY, ['--today', BASE]);
@@ -73,6 +73,7 @@ test("Decay is idempotent within a day", () => {
 
 test("Recall usage refreshes the decay baseline", () => {
   const root = fixture();
+  const TODAY = todayKey(root), BASE = addDays(TODAY, -10);
   try {
     run(root, INDEX, []);
     run(root, DECAY, ['--today', BASE]);
@@ -94,6 +95,7 @@ test("Recall usage refreshes the decay baseline", () => {
 
 test("Decay state removes entries that no longer exist", () => {
   const root = fixture();
+  const TODAY = todayKey(root), BASE = addDays(TODAY, -10);
   try {
     run(root, INDEX, []);
     run(root, DECAY, ['--today', BASE]);

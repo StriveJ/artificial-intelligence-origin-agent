@@ -4,6 +4,9 @@ import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { makeTestDir } from './test-tmp.mjs';
+import {createBusinessClock} from '../../../../../product/core-space/scripts/lib/day-clock.mjs';
+import {spawnSync} from 'node:child_process';
+
 
 import {
   claudeDirName,
@@ -17,6 +20,13 @@ import {
   upsertUsageRow,
 } from '../../../../../product/core-space/scripts/lib/host-usage.mjs';
 
+
+function configuredClock(timeZone='Asia/Shanghai',hour=6){
+ const root=makeTestDir('aipa-host-clock-');mkdirSync(join(root,'user-space'),{recursive:true});
+ writeFileSync(join(root,'user-space','llm-provider.yaml'),'time_zone: '+timeZone+'\nday_start_hour: '+hour+'\n');
+ return {root,clock:createBusinessClock(root)};
+}
+const sharedClock=configuredClock().clock;
 
 const codexLine = (ts, cum, ctx, window = 1000000) => JSON.stringify({
   timestamp: ts,
@@ -46,7 +56,7 @@ test("parseCodexRollout reads cwd and cumulative/per-turn usage without bodies",
 
 test("codexDayUsage uses cumulative differences, not summed turns, and the last daily watermark", () => {
   const { points } = parseCodexRollout(codexText);
-  const row = codexDayUsage({ points, day: '2026-09-12', dayStartHour: 6 });
+  const row = codexDayUsage({ points, day: '2026-09-12', dayStartHour: 6, clock: sharedClock });
 
   assert.equal(row.inputTokens, 9000 - 1000);
   assert.equal(row.freshTokens, 8000 - 7700, "New input equals total input minus cache hits");
@@ -76,7 +86,7 @@ const claudeText = [
 test("parseClaudeLog/claudeDayUsage sum usages, count cache writes as new input, and keep the final watermark", () => {
   const { points } = parseClaudeLog(claudeText);
   assert.equal(points.length, 2);
-  const row = claudeDayUsage({ points, day: '2026-09-12', dayStartHour: 6 });
+  const row = claudeDayUsage({ points, day: '2026-09-12', dayStartHour: 6, clock: sharedClock });
   assert.equal(row.host, 'claude-code');
   assert.equal(row.freshTokens, 200 + 150 + 1000, "New input equals input plus cache_creation");
   assert.equal(row.cachedTokens, 14000);
@@ -150,4 +160,49 @@ test("Keep tokens/window/source from one sample across sessions and select the l
   const row=collectHostUsage({home,day,now,dayStartHour:0})[0];
   assert.equal(row.ctxTokens,40000); assert.equal(row.ctxWindow,100000); assert.equal(row.ctxPct,40);
   assert.equal(row.ctxSource.session,'rollout-a.jsonl'); assert.equal(row.ctxSource.aggregate,'max-session-last-ratio');
+});
+
+test('Configured host-usage days are independent of OS zones across UTC, non-hour offsets, and DST gaps and overlaps',()=>{
+ const scenarios=[
+  {zone:'UTC',hour:6,day:'2026-09-12',instants:['2026-09-12T05:59:59Z','2026-09-12T06:00:00Z','2026-09-12T07:00:00Z','2026-09-13T06:00:00Z']},
+  {zone:'Asia/Kathmandu',hour:6,day:'2026-09-12',instants:['2026-09-12T00:14:59Z','2026-09-12T00:15:00Z','2026-09-12T01:00:00Z','2026-09-13T00:15:00Z']},
+  {zone:'America/New_York',hour:2,day:'2026-03-08',instants:['2026-03-08T06:59:59Z','2026-03-08T07:00:00Z','2026-03-08T07:30:00Z','2026-03-09T06:00:00Z']},
+  {zone:'America/New_York',hour:2,day:'2026-11-01',instants:['2026-11-01T06:59:59Z','2026-11-01T07:00:00Z','2026-11-01T07:30:00Z','2026-11-02T07:00:00Z']},
+  {zone:'America/New_York',hour:1,day:'2026-11-01',instants:['2026-11-01T04:59:59Z','2026-11-01T05:30:00Z','2026-11-01T06:30:00Z','2026-11-02T06:00:00Z']},
+ ].map(spec=>({...spec,root:configuredClock(spec.zone,spec.hour).root}));
+ const worker=`
+  import assert from 'node:assert/strict';
+  import {createBusinessClock} from ${JSON.stringify(new URL('../../../../../product/core-space/scripts/lib/day-clock.mjs',import.meta.url).href)};
+  import {codexDayUsage,claudeDayUsage} from ${JSON.stringify(new URL('../../../../../product/core-space/scripts/lib/host-usage.mjs',import.meta.url).href)};
+  for(const spec of JSON.parse(process.argv[1])){
+   const clock=createBusinessClock(spec.root),points=spec.instants.map((ts,index)=>({ts,input:[1000,5000,8000,12000][index],cached:[800,4000,7000,10000][index],output:[10,50,80,120][index],reasoning:0,ctx:100+index,window:1000}));
+   assert.notEqual(clock.dayKey(new Date(points[0].ts)),spec.day,spec.zone);
+   assert.equal(clock.dayKey(new Date(points[1].ts)),spec.day,spec.zone);
+   assert.equal(clock.dayKey(new Date(points[2].ts)),spec.day,spec.zone);
+   assert.notEqual(clock.dayKey(new Date(points[3].ts)),spec.day,spec.zone);
+   const codex=codexDayUsage({points:[{ts:'invalid'},...points],day:spec.day,clock});
+   assert.equal(codex.points,2);assert.equal(codex.inputTokens,7000);assert.equal(codex.cachedTokens,6200);assert.equal(codex.freshTokens,800);assert.equal(codex.outputTokens,70);assert.equal(codex.ctxTokens,102);
+   const claude=claudeDayUsage({points:[{ts:'invalid'},...spec.instants.map((ts,index)=>({ts,input:10*(index+1),cacheRead:100*(index+1),cacheCreate:index,output:index+1}))],day:spec.day,clock});
+   assert.equal(claude.points,2);assert.equal(claude.freshTokens,53);assert.equal(claude.cachedTokens,500);assert.equal(claude.inputTokens,553);assert.equal(claude.outputTokens,5);assert.equal(claude.ctxTokens,332);
+  }
+  console.log('configured-clock scenarios passed');
+ `;
+ for(const zone of ['UTC','Asia/Shanghai','America/Los_Angeles']){
+  const result=spawnSync(process.execPath,['--input-type=module','-e',worker,JSON.stringify(scenarios)],{env:{...process.env,TZ:zone},encoding:'utf8',windowsHide:true});
+  assert.equal(result.status,0,zone+': '+result.stderr);assert.equal(result.stdout.trim(),'configured-clock scenarios passed');
+ }
+});
+
+test('Host-usage library calls without a configured clock retain the existing OS-local API',()=>{
+ const worker=`
+  import assert from 'node:assert/strict';
+  import {codexDayUsage,claudeDayUsage} from ${JSON.stringify(new URL('../../../../../product/core-space/scripts/lib/host-usage.mjs',import.meta.url).href)};
+  const points=[{ts:'2026-09-12T05:59:00Z',input:1000,cached:800,output:10,reasoning:0,ctx:900,window:1000},{ts:'2026-09-12T06:00:00Z',input:5000,cached:4000,output:50,reasoning:0,ctx:4000,window:10000}],utc=process.env.TZ==='UTC';
+  const codex=codexDayUsage({points,day:'2026-09-12',dayStartHour:6});assert.equal(codex.points,utc?1:2);assert.equal(codex.inputTokens,utc?4000:5000);
+  const claude=claudeDayUsage({points:points.map(p=>({ts:p.ts,input:10,cacheRead:20,cacheCreate:0,output:1})),day:'2026-09-12',dayStartHour:6});assert.equal(claude.points,utc?1:2);assert.equal(claude.inputTokens,utc?30:60);
+ `;
+ for(const zone of ['UTC','Asia/Shanghai']){
+  const result=spawnSync(process.execPath,['--input-type=module','-e',worker],{env:{...process.env,TZ:zone},encoding:'utf8',windowsHide:true});
+  assert.equal(result.status,0,zone+': '+result.stderr);
+ }
 });

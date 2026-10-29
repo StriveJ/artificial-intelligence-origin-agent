@@ -6,16 +6,15 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeTestDir } from './lib/test-tmp.mjs';
-import { dayKey } from '../../../../product/core-space/scripts/lib/time-boundary.mjs';
+import {todayKey} from '../../../../product/core-space/scripts/lib/day-clock.mjs';
 
 const SCRIPT = join(join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', 'product', 'core-space', 'scripts'), 'aipa-refresh.mjs');
-const nowTs = () => { const d = new Date(); const p = (x) => String(x).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
-const TODAY = dayKey(nowTs(), 6);
 
 function fixture() {
   const root = makeTestDir('aipa-refresh-');
   mkdirSync(join(root, 'user-space', 'memory'), { recursive: true });
   mkdirSync(join(root, 'user-space', 'logs'), { recursive: true });
+  writeFileSync(join(root,'user-space','llm-provider.yaml'),'time_zone: UTC\nday_start_hour: 6\n');
   writeFileSync(join(root, 'user-space', 'memory', 'context.md'), "\u5e38\u9a7b\u4e0a\u4e0b\u6587".repeat(50), 'utf8');
   return root;
 }
@@ -35,8 +34,8 @@ function fakeHome(instanceRoot, day) {
   });
   writeFileSync(join(dir, 'rollout-1.jsonl'), [
     JSON.stringify({ timestamp: iso('04:00'), type: 'session_meta', payload: { cwd: instanceRoot } }),
-    line(iso('04:10'), { input: 1000, cached: 900, output: 10 }, 800),
-    line(iso('05:00'), { input: 4000, cached: 3800, output: 40 }, 3000),
+    line(iso('12:10'), { input: 1000, cached: 900, output: 10 }, 800),
+    line(iso('13:00'), { input: 4000, cached: 3800, output: 40 }, 3000),
   ].join('\n') + '\n', 'utf8');
   return home;
 }
@@ -44,7 +43,8 @@ const run = (root, argv) => execFileSync(process.execPath, [SCRIPT, '--root', ro
 
 test("Refresh rebuilds the dashboard and samples host usage in one command", () => {
   const root = fixture();
-  const home = fakeHome(root, TODAY);
+  const today=todayKey(root);
+  const home = fakeHome(root, today);
   try {
     const out = JSON.parse(run(root, ['--project', 'demo', '--home', home]));
     assert.equal(out.status, 'ok');
@@ -63,7 +63,8 @@ test("Refresh rebuilds the dashboard and samples host usage in one command", () 
 
 test("Refresh --ledger also samples the ledger and remains idempotent", () => {
   const root = fixture();
-  const home = fakeHome(root, TODAY);
+  const today=todayKey(root);
+  const home = fakeHome(root, today);
   try {
     const first = JSON.parse(run(root, ['--ledger', '--home', home]));
     assert.equal(first.steps.ledger, 'ok');
@@ -73,7 +74,7 @@ test("Refresh --ledger also samples the ledger and remains idempotent", () => {
     const usageRows = readFileSync(join(root, 'user-space', 'logs', 'metrics', 'host-usage.jsonl'), 'utf8').trim().split(/\r?\n/);
     assert.equal(metricsRows.length, 1, "One row per day, replaced on repeat collection");
     assert.equal(usageRows.length, 1, "One row per day, replaced on repeat collection");
-    assert.equal(JSON.parse(metricsRows[0]).date, TODAY);
+    assert.equal(JSON.parse(metricsRows[0]).date, today);
   } finally {
     rmSync(root, { recursive: true, force: true });
     rmSync(home, { recursive: true, force: true });

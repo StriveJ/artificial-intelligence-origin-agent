@@ -6,43 +6,40 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeTestDir } from './lib/test-tmp.mjs';
+import { todayKey } from '../../../../product/core-space/scripts/lib/day-clock.mjs';
+import { addDays } from '../../../../product/core-space/scripts/lib/time-boundary.mjs';
 
 const HERE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', 'product', 'core-space', 'scripts');
 const SCRIPT = join(HERE, 'aipa-session.mjs');
 
-function fixture(prevDay) {
+function fixture(dayOffset) {
   const root = makeTestDir('aipa-session-');
   mkdirSync(join(root, 'user-space', 'memory'), { recursive: true });
   writeFileSync(join(root, 'user-space', 'llm-provider.yaml'), 'day_start_hour: 6\n', 'utf8');
-  if (prevDay) {
+  if (dayOffset !== undefined) {
     mkdirSync(join(root, 'state'), { recursive: true });
-    writeFileSync(join(root, 'state', 'last-active-day'), `${prevDay}\n`, 'utf8');
+    writeFileSync(join(root, 'state', 'last-active-day'), `${addDays(todayKey(root), dayOffset)}\n`, 'utf8');
   }
   return root;
 }
 const resume = (root) => execFileSync(process.execPath, [SCRIPT, 'resume', '--root', root, '--project', 'demo', '--tool', 'codex'], { encoding: 'utf8' });
-const dayKeyOf = (d) => { const p = (x) => String(x).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
-
-const todayKey = (now = new Date()) => dayKeyOf(new Date(now.getTime() - (now.getHours() < 6 ? 24 : 0) * 3600 * 1000));
-const shifted = (key, n) => { const [y, m, d] = key.split('-').map(Number); return dayKeyOf(new Date(y, m - 1, d + n)); };
-
 test("Session start after yesterday's activity prepends a day-change notice mechanically", () => {
-  const today = todayKey();
-  const root = fixture(shifted(today, -1));
+  const root = fixture(-1);
+  const today = todayKey(root);
   try {
     const out = resume(root);
     const file = readFileSync(join(root, 'state', 'resume-prompt.md'), 'utf8');
     for (const text of [out, file]) assert.match(text, /Day boundary/, "Both output and saved prompt must include the day-change notice");
     assert.equal(out.split(/\r?\n/)[0].includes("Day boundary"), true, "The day-change notice must be the first line");
     assert.match(file, /aipa-day-check/);
-    assert.equal(readFileSync(join(root, 'state', 'last-active-day'), 'utf8').trim(), shifted(today, -1), "Report without consuming; only aipa-day-check consumes the marker");
+    assert.equal(readFileSync(join(root, 'state', 'last-active-day'), 'utf8').trim(), addDays(today, -1), "Report without consuming; only aipa-day-check consumes the marker");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
 test("Session start on the same day after marker consumption has no day-change notice", () => {
-  const root = fixture(todayKey());
+  const root = fixture(0);
   try {
     const out = resume(root);
     assert.equal(out.includes("Day boundary"), false);
