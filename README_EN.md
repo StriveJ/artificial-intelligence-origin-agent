@@ -79,6 +79,13 @@ Source master produces stable/artifact master; source dev produces beta/artifact
 
 Pull requests target dev. Use synthetic data in issues, reproductions, and tests. Never submit actual profiles, conversations, secrets, runtime directories, or private configuration. A maintainer roster entry does not grant platform access; repository permissions and branch protection are configured separately.
 
+## Contact
+
+If you have any suggestions or ideas, feel free to contact me by email:
+
+- [1905212905@qq.com](mailto:1905212905@qq.com)
+- [strivejun@gmail.com](mailto:strivejun@gmail.com)
+
 ## License
 
 Code and documentation are licensed under [Apache License 2.0](LICENSE), including the explicit contributor patent grant and its conditions in Section 3. Third-party components retain their own licenses. Your personal instance data remains yours and is not automatically licensed by using AIPA.

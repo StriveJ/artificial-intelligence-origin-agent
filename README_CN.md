@@ -66,6 +66,13 @@ Origin master 对应稳定版和 Personal master；Origin dev 对应测试版和
 
 PR 面向 dev。问题、复现和测试只能使用合成数据，不要提交真实画像、对话、密钥、运行目录或私有配置。维护者名单不等于平台权限，仓库权限与分支保护需要单独配置。
 
+## 联系我
+
+如果你有什么建议与想法，可以发邮箱联系我：
+
+- [1905212905@qq.com](mailto:1905212905@qq.com)
+- [strivejun@gmail.com](mailto:strivejun@gmail.com)
+
 ## 许可证
 
 代码与文档统一采用 [Apache-2.0](LICENSE)，包含第 3 节明确的贡献者专利授权及其条件。第三方组件保留各自许可证，个人实例数据不会因使用 AIPA 自动适用本项目的开源许可证。
