@@ -1,6 +1,6 @@
 // init
 import { cpSync, mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, resolve, dirname, relative } from 'node:path';
+import { join, resolve, dirname, relative, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readBuildSource, withBuildSource } from '../core-space/scripts/lib/build-source.mjs';
 import { createHash } from 'node:crypto';
@@ -75,6 +75,31 @@ writeFileSync(join(root,'AIPA-MANIFEST.yaml'),`aipa:\n  version: ${version}\n  c
 if(buildSource){const manifest=join(root,'AIPA-MANIFEST.yaml');writeFileSync(manifest,withBuildSource(readFileSync(manifest,'utf8'),buildSource),'utf8');}
 writeFileSync(join(root,'user-space','profile.yaml'),`identity:\n  name: ${owner}\n  role: ${role}\n  industry: ${industry}\n  tech_stack: [${techList.join(', ')}]\n`,'utf8');
 if(!existsSync(join(root,'user-space','privacy.yaml'))) writeFileSync(join(root,'user-space','privacy.yaml'),`upload_policy:\n  mode: ask\n  block_patterns:\n    - "password|secret|token|apikey"\n`,'utf8');
+
+// Activation loads a project rule for every resolved project, including the instance's own
+// project (user-space/projects/<project>/project.yaml). Scaffold it here so a fresh install
+// can reach its first activation; without it aipa-load --context blocks with
+// required_context_unavailable. The identity must equal the directory basename that
+// aipa-project resolve derives from the working directory.
+{
+  const q=(value)=>JSON.stringify(String(value));
+  const ownProject=arg('project')||basename(root);
+  const ownProjectDir=join(root,'user-space','projects',ownProject);
+  if(!existsSync(join(ownProjectDir,'project.yaml'))){
+    mkdirSync(ownProjectDir,{recursive:true});
+    writeFileSync(join(ownProjectDir,'project.yaml'),
+`project_id: ${q(ownProject)}
+project_name: ${q(`${owner} AIPA instance`)}
+industry: ${q(industry||'personal agent')}
+goal: ${q('Keep this personal AIPA instance maintained: events, daily notes, memory distillation, protocol and local integrations.')}
+terms: [AIPA, personal agent, instance]
+relations:
+  reuse: []
+public_interfaces: []
+pattern_hits: []
+`,'utf8');
+  }
+}
 
 if(industry||techList.length){
   try{
