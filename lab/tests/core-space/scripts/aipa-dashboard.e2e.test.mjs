@@ -20,7 +20,7 @@ function fixture() {
   writeFileSync(join(root, 'user-space', 'projects', 'demo', 'scene.md'), "---\nproject: demo\nupdated: 2026-09-11\nlast_activity: 2026-09-11\n---\n\n## \u672a\u95ed\u73af\n- \u5f85\u8865\u6d4b\u8bd5\n", 'utf8');
   return root;
 }
-const run = (root, argv) => JSON.parse(execFileSync(process.execPath, [SCRIPT, '--root', root, ...argv], { encoding: 'utf8' }).trim());
+const run = (root, argv, env = process.env) => JSON.parse(execFileSync(process.execPath, [SCRIPT, '--root', root, ...argv], { encoding: 'utf8', env }).trim());
 const listAll = (dir) => { const out = []; const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) { const p = join(d, f.name); out.push(p); if (f.isDirectory()) walk(p); } }; walk(dir); return out.sort(); };
 
 test("The dashboard is one self-contained HTML file with fifteen blocks and four groups", () => {
@@ -129,10 +129,9 @@ test("Actual usage is grouped into machine-labelled host cards", () => {
       inputTokens: 500000, cachedTokens: 490000, freshTokens: fresh, cacheHitPct: 98, outputTokens: 12000, reasoningTokens: 3000,
     });
 
-    const dayAgo = (n) => { const x = new Date(); x.setDate(x.getDate() - n); const p = (v) => String(v).padStart(2, '0'); return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}`; };
-    writeFileSync(join(dir, 'host-usage.jsonl'), [row(dayAgo(1), 'codex', 250000, 9000), row(dayAgo(0), 'codex', 280000, 7000)].join('\n') + '\n', 'utf8');
+    writeFileSync(join(dir, 'host-usage.jsonl'), [row('2026-09-10', 'codex', 250000, 9000), row('2026-09-11', 'codex', 280000, 7000)].join('\n') + '\n', 'utf8');
 
-    run(root, []);
+    run(root, ['--now', '2026-09-11 12:00:00']);
     const html = readFileSync(join(root, 'user-space', 'logs', 'dashboard.html'), 'utf8');
 
     assert.ok(html.includes("Usage Trend · legacy · Codex"), "The Codex card includes the machine name");
@@ -144,6 +143,36 @@ test("Actual usage is grouped into machine-labelled host cards", () => {
     assert.ok(html.includes("must not be added or multiplied"), "Explain the distinction and do not mix the two measurement sets");
     assert.ok(!/https?:\/\//.test(html), "No external links");
     assert.ok(!/NaN|Infinity/.test(html));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("Usage cards select the business day at the configured rollover regardless of runner time zone", () => {
+  const root = fixture();
+  try {
+    const dir = join(root, 'user-space', 'logs', 'metrics');
+    mkdirSync(dir, { recursive: true });
+    const rows = [
+      { date: '2026-09-10', host: 'codex', inputTokens: 100, cachedTokens: 20, freshTokens: 80 },
+      { date: '2026-09-11', host: 'codex', inputTokens: 100, cachedTokens: 80, freshTokens: 20 },
+    ];
+    writeFileSync(join(dir, 'host-usage.jsonl'), rows.map((row) => JSON.stringify(row)).join('\n') + '\n', 'utf8');
+    for (const hour of [6, 3]) {
+      writeFileSync(join(root, 'user-space', 'llm-provider.yaml'), `time_zone: Asia/Shanghai\nday_start_hour: ${hour}\n`, 'utf8');
+      for (const zone of ['UTC', 'Pacific/Honolulu', 'Asia/Shanghai']) {
+        for (const [time, hit, otherHit] of [
+          [`${String(hour - 1).padStart(2, '0')}:59:59`, 20, 80],
+          [`${String(hour).padStart(2, '0')}:00:00`, 80, 20],
+        ]) {
+          run(root, ['--now', `2026-09-11 ${time}`], { ...process.env, TZ: zone });
+          const html = readFileSync(join(root, 'user-space', 'logs', 'dashboard.html'), 'utf8');
+          assert.ok(html.includes('Actual Usage · legacy') && html.includes('Host Details · legacy'), `Missing usage cards at ${time} in ${zone}`);
+          assert.ok(html.includes(`Cache hit ${hit}%`), `Wrong business day at ${time} in ${zone}`);
+          assert.ok(!html.includes(`Cache hit ${otherHit}%`), `Mixed adjacent business days at ${time} in ${zone}`);
+        }
+      }
+    }
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
