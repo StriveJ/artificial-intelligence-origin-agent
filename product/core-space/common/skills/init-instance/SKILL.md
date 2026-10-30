@@ -21,7 +21,7 @@ version: 1.0.0
 4. From the foundation root run `node scripts/aipa-init.mjs --root <destination> --owner <name> [--industry <industry>] [--tech <stack>] [--role <role>] [--project <project-id>]`.
 5. Inspect init output and mentor matches, if any.
 6. Verify entry shells/manifest/changelog/state, Core policy/activation/anchors/hooks/skills/mentors, and personal profile/privacy/memory/logs/skills/projects. The instance Git tag must match its framework version.
-7. Confirm the instance's own project rule exists: `user-space/projects/<project>/project.yaml` (default project id is the destination directory name). Activation blocks without it.
+7. Confirm the instance's own project rule exists: `user-space/projects/<project>/project.yaml` (default project id is the resolved destination directory name). IDs accept letters, numbers, underscores, hyphens, and dots, excluding `.` and `..`. Use `--project <project-id>` if the directory name is unsuitable; init stores its device-local mapping in ignored `local_path` so project resolution returns that ID. Activation blocks without the rule.
 8. Explain opening the instance in an IDE and running its own Core scripts with explicit root.
 
 ## Dependencies

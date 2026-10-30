@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, cpSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 import { makeTestDir } from './lib/test-tmp.mjs';
 import { PRODUCT, git, commitAll, commitOne, makeOrigin } from './lib/test-git.mjs';
 
@@ -198,6 +198,7 @@ test("A2: the contribution skeleton lists excluded items but only counts persona
 
     assert.doesNotMatch(skeleton, /user-space\/memory\/x\.md/, "Personal paths must not appear in materials that will be public in a PR");
     assert.doesNotMatch(skeleton, /user-space\/tools\/foo\.mjs/, "Personal executable paths must also remain private");
+    assert.equal(skeleton.includes(`user-space/projects/${basename(inst)}/project.yaml`), false, "The scaffolded instance project path must also remain private");
 
 
 
@@ -207,8 +208,9 @@ test("A2: the contribution skeleton lists excluded items but only counts persona
 
 
     const st = JSON.parse(execFileSync('node', [STATUS, '--root', inst, '--json'], { encoding: 'utf8' }));
-    const personalCount = st.outOfZone.filter((e) => e.path.startsWith('user-space/')).length;
-    assert.equal(personalCount, 2, "Fixture check: both personal files are listed outside the framework");
+    const personalPaths = st.outOfZone.filter((e) => e.path.startsWith('user-space/')).map((e) => e.path);
+    assert.deepEqual(personalPaths.sort(), ['user-space/memory/x.md', `user-space/projects/${basename(inst)}/project.yaml`, 'user-space/tools/foo.mjs'].sort(), "Both added personal files and the scaffolded project rule remain outside the framework");
+    const personalCount = personalPaths.length;
     assert.match(block, new RegExp("Excluded `user-space/\\*\\*` entries: " + personalCount + " "),
       "Report only the personal-entry count matching actual status");
 

@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, rmSync, cpSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 import { makeTestDir } from './lib/test-tmp.mjs';
 import { PRODUCT, makeOrigin, makeChannelOrigin, git } from './lib/test-git.mjs';
 import { SYNC_MAP } from '../../../../product/core-space/scripts/lib/origin-sync-map.mjs';
@@ -36,7 +36,9 @@ test("A local framework edit with unchanged upstream is pending without upstream
 
 
     const clean = JSON.parse(execFileSync('node', [STATUS, '--root', inst, '--json'], { encoding: 'utf8' }));
-    assert.equal(clean.outOfZone.length, 0, "A clean instance must have no misplaced framework changes; this section must not inventory personal data");
+    assert.deepEqual(clean.outOfZone.map((e) => e.path), [`user-space/projects/${basename(inst)}/project.yaml`], "The scaffolded personal project rule is outside the framework");
+    assert.ok(clean.outOfZone.every((e) => !e.warn), "The project rule must not trigger misplaced-framework warnings");
+    assert.equal(clean.framework.some((e) => e.path.startsWith('user-space/')), false, "The project rule must never become a framework contribution");
 
     const target = join(inst, 'core-space', 'scripts', 'aipa-summarize.mjs');
     writeFileSync(target, readFileSync(target, 'utf8') + '\n// MY-FRAMEWORK-EDIT\n');

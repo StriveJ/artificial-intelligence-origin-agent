@@ -11,11 +11,16 @@ import { versionOf, VERSION_TOKEN } from '../core-space/scripts/lib/semver.mjs';
 
 import { TELEMETRY_DISCLOSURE } from '../core-space/scripts/lib/telemetry-disclosure.mjs';
 function arg(n){const i=process.argv.indexOf('--'+n);return i>=0?process.argv[i+1]:'';}
-const root=arg('root')||'.';
+const root=resolve(arg('root')||'.');
 const owner=arg('owner')||'me';
 const industry=arg('industry')||'';
 const tech=arg('tech')||'';
 const role=arg('role')||"Professional";
+const ownProject=arg('project')||basename(root);
+if ((process.argv.includes('--project')&&!arg('project')) || !/^[\p{L}\p{N}_.-]+$/u.test(ownProject) || ['.','..'].includes(ownProject)) {
+  console.error("Project ID must contain only letters, numbers, underscores, hyphens, or dots, and cannot equal '.' or '..'. Use --project <id> when the directory name is unsuitable.");
+  process.exit(1);
+}
 
 const channel=arg('channel')==='beta'?'beta':'stable';
 const telemetryArg=arg('telemetry');
@@ -79,11 +84,10 @@ if(!existsSync(join(root,'user-space','privacy.yaml'))) writeFileSync(join(root,
 // Activation loads a project rule for every resolved project, including the instance's own
 // project (user-space/projects/<project>/project.yaml). Scaffold it here so a fresh install
 // can reach its first activation; without it aipa-load --context blocks with
-// required_context_unavailable. The identity must equal the directory basename that
-// aipa-project resolve derives from the working directory.
+// required_context_unavailable. Register overrides locally so aipa-project resolve
+// returns the same identity instead of falling back to the directory basename.
 {
   const q=(value)=>JSON.stringify(String(value));
-  const ownProject=arg('project')||basename(root);
   const ownProjectDir=join(root,'user-space','projects',ownProject);
   if(!existsSync(join(ownProjectDir,'project.yaml'))){
     mkdirSync(ownProjectDir,{recursive:true});
@@ -99,6 +103,7 @@ public_interfaces: []
 pattern_hits: []
 `,'utf8');
   }
+  if(ownProject!==basename(root))writeFileSync(join(ownProjectDir,'local_path'),root+'\n','utf8');
 }
 
 if(industry||techList.length){
